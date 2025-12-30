@@ -1,201 +1,215 @@
--- Load Updated Rayfield Library (recommended and stable as of 2025)
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+-- AFSE HUB V1 BY MIGUEL | Anime Fighting Simulator: Endless (All Stats!)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Load Main GUI directly (no key system)
 local Window = Rayfield:CreateWindow({
-    Name = "MARCELO SCRIPT",
-    LoadingTitle = "MARCELO SCRIPT",
-    LoadingSubtitle = "Powered by 67Rizzmas",
-    ShowText = "Tap to Open MARCELO SCRIPT",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "MarceloScriptConfig",
-        FileName = "Config"
-    },
-    ToggleUIKeybind = nil,
-    Draggable = true
+   Name = "AFSE HUB V1 BY MIGUEL",
+   LoadingTitle = "Loading All Stats...",
+   LoadingSubtitle = "Strength → 1T + Chakra/Sword/Agility/Durability/Speed!",
+   ConfigurationSaving = {Enabled = true, FolderName = "AFSEHubV1", FileName = "config"},
+   Discord = {Enabled = false},
+   KeySystem = false
 })
 
--- Main Features Tab
-local MainTab = Window:CreateTab("Main Features", "home")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
 
--- Noclip Toggle
-MainTab:CreateToggle({
-    Name = "Noclip",
-    CurrentValue = false,
-    Flag = "NoclipToggle",
-    Callback = function(Value)
-        local Player = game.Players.LocalPlayer
-        local Character = Player.Character or Player.CharacterAdded:Wait()
-        if Value then
-            for _, part in pairs(Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
+-- Update Char/Root on respawn
+local function UpdateChar()
+   Player.Character = Player.Character or Player.CharacterAdded:Wait()
+   return Player.Character:WaitForChild("HumanoidRootPart")
+end
+local HumanoidRootPart = UpdateChar()
+Player.CharacterAdded:Connect(function() HumanoidRootPart = UpdateChar() end)
+
+-- Remotes (Spy-confirmed!)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local TrainRemote = Remotes:WaitForChild("RemoteEvent")  -- :FireServer("Train", 1-6)
+local QuestFolder = Remotes:WaitForChild("Quest")
+local AcceptRemote = QuestFolder:WaitForChild("AcceptQuest")
+local CompleteRemote = QuestFolder:WaitForChild("CompleteQuest")
+
+-- TP Func
+local function Teleport(CFramePos)
+   pcall(function() HumanoidRootPart.CFrame = CFramePos end)
+end
+
+-- Quests (Bang/Ghoul)
+local Quests = {
+   Bang = {NPCPos = CFrame.new(-150, 50, 200), MobPos = CFrame.new(-200, 40, 250), NPCName = "Bang", RequiredKills = 50},
+   Ghoul = {NPCPos = CFrame.new(100, 10, -50), MobPos = CFrame.new(150, 5, -100), NPCName = "Ghoul", RequiredKills = 40}
+}
+
+local function DoQuest(QuestName)
+   local Quest = Quests[QuestName]
+   if not Quest then return end
+   pcall(function()
+      Teleport(Quest.NPCPos); wait(1)
+      AcceptRemote:FireServer(Quest.NPCName)
+      Rayfield:Notify({Title = QuestName, Content = "Accepted!", Duration = 2})
+      wait(1); Teleport(Quest.MobPos)
+      for i = 1, Quest.RequiredKills do
+         wait(0.2)
+         pcall(function()
+            for _, mob in pairs(workspace.Enemies:GetChildren()) do  -- Adjust path
+               if mob:FindFirstChild("HumanoidRootPart") then
+                  Teleport(mob.HumanoidRootPart.CFrame * CFrame.new(0,5,0))
+                  break
+               end
             end
-            local connection
-            connection = game:GetService("RunService").Stepped:Connect(function()
-                if not MainTab.Flags.NoclipToggle.CurrentValue then
-                    connection:Disconnect()
-                    return
-                end
-                for _, part in pairs(Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
+         end)
+      end
+      Teleport(Quest.NPCPos); wait(1)
+      CompleteRemote:FireServer(Quest.NPCName)
+      Rayfield:Notify({Title = QuestName, Content = "Completed!", Duration = 2})
+   end)
+end
+
+-- Main Tab
+local MainTab = Window:CreateTab("Main")
+MainTab:CreateSection("Auto Quest")
+local QuestDropdown = MainTab:CreateDropdown({
+   Name = "Quest", Options = {"Bang", "Ghoul"}, CurrentOption = {"Bang"},
+   Callback = function(Option) _G.SelectedQuest = Option[1] end
+})
+local AutoQuestToggle = MainTab:CreateToggle({
+   Name = "Auto Quest", Callback = function(Value)
+      _G.AutoQuest = Value
+      spawn(function()
+         while _G.AutoQuest do DoQuest(_G.SelectedQuest) wait(_G.QuestDelay or 2) end
+      end)
+   end
+})
+MainTab:CreateSlider({Name = "Quest Delay", Range = {0.5, 10}, Increment = 0.5, CurrentValue = 2, Callback = function(V) _G.QuestDelay = V end})
+
+MainTab:CreateSection("Auto Train All Stats")
+local AutoTrainToggle = MainTab:CreateToggle({
+   Name = "Auto Train All (Str/Dura/Chakra/Sword/Agi/Speed)",
+   Callback = function(Value)
+      _G.AutoTrain = Value
+      spawn(function()
+         while _G.AutoTrain do
+            wait(_G.TrainDelay or 0.1)
+            pcall(function()
+               TrainRemote:FireServer("Train", 1)  -- Strength
+               TrainRemote:FireServer("Train", 2)  -- Durability
+               TrainRemote:FireServer("Train", 3)  -- Chakra
+               TrainRemote:FireServer("Train", 4)  -- Sword
+               TrainRemote:FireServer("Train", 5)  -- Agility
+               TrainRemote:FireServer("Train", 6)  -- Speed
             end)
-        else
-            for _, part in pairs(Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
-    end,
+         end
+      end)
+   end
+})
+MainTab:CreateSlider({Name = "Train Delay", Range = {0.05, 2}, Increment = 0.05, CurrentValue = 0.1, Callback = function(V) _G.TrainDelay = V end})
+
+-- Teleports Tab (Strength Areas 10K → 1T!)
+local TeleTab = Window:CreateTab("Teleports")
+TeleTab:CreateSection("Strength Training Areas")
+local TPPositions = {
+   ["10K Strength"] = CFrame.new(200, 20, 100),   -- Update w/ Save!
+   ["100K Strength"] = CFrame.new(400, 20, 200),
+   ["1M Strength"] = CFrame.new(600, 20, 300),    -- Meteor?
+   ["10M Strength"] = CFrame.new(800, 20, 400),   -- Flying
+   ["100M Strength"] = CFrame.new(1000, 20, 500), -- Arena
+   ["1B Strength"] = CFrame.new(1200, 20, 600),
+   ["1T Strength"] = CFrame.new(1400, 20, 700),
+   Spawn = CFrame.new(0, 10, 0),
+   Gym = CFrame.new(50, 5, 150),
+   ["Fruit Library"] = CFrame.new(-300, 15, 100),
+   ["Fruit Chakra"] = CFrame.new(200, 30, -50),
+   ["Fruit 1B Chakra"] = CFrame.new(800, 40, 600),
+   ["100K Speed"] = CFrame.new(1000, 25, 700)
+}
+local TPDropdown = TeleTab:CreateDropdown({
+   Name = "Teleport", Options = {"10K Strength", "100K Strength", "1M Strength", "10M Strength", "100M Strength", "1B Strength", "1T Strength", "Spawn", "Gym", "Fruit Library", "Fruit Chakra", "Fruit 1B Chakra", "100K Speed"},
+   CurrentOption = {"10K Strength"},
+   Callback = function(Option) Teleport(TPPositions[Option[1]]) end
+})
+local SavePosButton = TeleTab:CreateButton({
+   Name = "Save Current Pos (Clipboard)",
+   Callback = function()
+      setclipboard(tostring(HumanoidRootPart.CFrame))
+      Rayfield:Notify({Title = "Saved!", Content = "Paste to TPPositions!", Duration = 3})
+   end
 })
 
--- Fly Toggle Button
-MainTab:CreateButton({
-    Name = "Toggle Fly",
-    Description = "Tap to enable/disable flying",
-    Callback = function()
-        local Player = game.Players.LocalPlayer
-        local Character = Player.Character or Player.CharacterAdded:Wait()
-        local RootPart = Character:FindFirstChild("HumanoidRootPart")
-        local Humanoid = Character:FindFirstChild("Humanoid")
-        if not RootPart or not Humanoid then return end
-
-        if Player:GetAttribute("Flying") then
-            Player:SetAttribute("Flying", false)
-            if RootPart:FindFirstChild("FlyVelocity") then
-                RootPart.FlyVelocity:Destroy()
-            end
-            Rayfield:Notify({Title = "Fly", Content = "Flying disabled!", Duration = 3})
-        else
-            Player:SetAttribute("Flying", true)
-            local BodyVelocity = Instance.new("BodyVelocity")
-            BodyVelocity.Name = "FlyVelocity"
-            BodyVelocity.MaxForce = Vector3.new(40000, 40000, 40000)
-            BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            BodyVelocity.Parent = RootPart
-
-            local connection
-            connection = game:GetService("RunService").Heartbeat:Connect(function()
-                if not Player:GetAttribute("Flying") then
-                    connection:Disconnect()
-                    return
-                end
-                local moveDirection = Humanoid.MoveDirection * 50
-                BodyVelocity.Velocity = moveDirection + Vector3.new(0, 5, 0)
+-- Misc Tab
+local MiscTab = Window:CreateTab("Misc")
+MiscTab:CreateSection("Swords & Anti-AFK")
+local EquipBestButton = MiscTab:CreateButton({
+   Name = "Equip Best Sword",
+   Callback = function()
+      local bestSword, maxRarity = nil, 0
+      for _, tool in pairs(Player.Backpack:GetChildren()) do
+         if tool:IsA("Tool") and (string.find(tool.Name:lower(), "sword") or string.find(tool.Name:lower(), "blade")) then
+            local rarity = tool:FindFirstChild("Rarity") and tool.Rarity.Value or 0
+            if rarity > maxRarity then maxRarity = rarity; bestSword = tool end
+         end
+      end
+      if bestSword then
+         Player.Character.Humanoid:EquipTool(bestSword)
+         Rayfield:Notify({Title = "Equipped", Content = bestSword.Name, Duration = 2})
+      else Rayfield:Notify({Title = "No Sword", Content = "Found!", Duration = 2}) end
+   end
+})
+local AntiAFKToggle = MiscTab:CreateToggle({
+   Name = "Anti-AFK", Callback = function(Value)
+      _G.AntiAFK = Value
+      spawn(function()
+         while _G.AntiAFK do wait(60)
+            local vim = game:GetService("VirtualInputManager")
+            vim:SendKeyEvent(true, "W", false, game); wait(0.1)
+            vim:SendKeyEvent(false, "W", false, game)
+         end
+      end)
+   end
+})
+MiscTab:CreateSection("Auto Fruit")
+local AutoFruitToggle = MiscTab:CreateToggle({
+   Name = "Auto TP to Fruit", Callback = function(Value)
+      _G.AutoFruit = Value
+      spawn(function()
+         while _G.AutoFruit do wait(1)
+            pcall(function()
+               for _, fruit in pairs(workspace:GetChildren()) do
+                  if string.find(fruit.Name:lower(), "fruit") or string.find(fruit.Name:lower(), "devil") then
+                     Teleport(fruit.PrimaryPart.CFrame)
+                     Rayfield:Notify({Title = "Fruit!", Content = "TPed!", Duration = 1}); break
+                  end
+               end
             end)
-            Rayfield:Notify({Title = "Fly", Content = "Flying enabled! Use movement controls.", Duration = 3})
-        end
-    end,
+         end
+      end)
+   end
 })
 
--- Chat Bypass Tab (unchanged)
-local BypassTab = Window:CreateTab("Chat Bypass", "message")
-
-BypassTab:CreateButton({
-    Name = "Enable Simple Word Bypass",
-    Description = "Bypasses common filtered words (including adult terms)",
-    Callback = function()
-        local bypassMap = {
-            ["fuck"] = "fück",
-            ["shit"] = "shіt",
-            ["bitch"] = "bіtch",
-            ["ass"] = "аss",
-            ["nigga"] = "nіgga",
-            ["nigger"] = "nіgger",
-            ["damn"] = "dаmn",
-            ["cunt"] = "cünt",
-            ["faggot"] = "fаggot",
-            ["retard"] = "retаrd",
-            ["cum"] = "cüm",
-            ["creampie"] = "creаmpie",
-            ["bang"] = "bаng",
-        }
-
-        local oldChat = game:GetService("TextChatService").ChatInputBarConfiguration.TargetTextChannel.SendAsync
-        game:GetService("TextChatService").ChatInputBarConfiguration.TargetTextChannel.SendAsync = function(self, text)
-            for word, bypass in pairs(bypassMap) do
-                text = text:gsub(word, bypass)
-                    :gsub(word:upper(), bypass:upper())
-                    :gsub(word:gsub("^%l", string.upper), bypass:gsub("^%l", string.upper))
+-- PvP Tab
+local PvPTab = Window:CreateTab("PvP")
+PvPTab:CreateSection("Auto Farm Players")
+local SpawnPos = CFrame.new(0, 10, 0).Position
+local SafeDist = 1000
+local AutoPlayerFarmToggle = PvPTab:CreateToggle({
+   Name = "Auto Farm Players (Outside Safe)",
+   Callback = function(Value)
+      _G.PlayerFarm = Value
+      spawn(function()
+         while _G.PlayerFarm do wait(0.5)
+            for _, p in pairs(Players:GetPlayers()) do
+               if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                  local dist = (p.Character.HumanoidRootPart.Position - SpawnPos).Magnitude
+                  if dist > SafeDist then
+                     Teleport(p.Character.HumanoidRootPart.CFrame * CFrame.new(0,5,0))
+                     -- Add damage remote if spied
+                  end
+               end
             end
-            oldChat(self, text)
-        end
-        Rayfield:Notify({Title = "Bypass", Content = "Simple word bypass enabled! Includes cum, creampie, bang ass.", Duration = 6})
-    end,
+         end
+      end)
+   end
 })
 
-BypassTab:CreateButton({
-    Name = "Enable Advanced Bypass",
-    Description = "Inserts invisible characters between letters",
-    Callback = function()
-        local zwsp = ""  -- Zero-width space
-        local function bypassText(text)
-            return text:gsub("(%a)", "%1"..zwsp):gsub(zwsp..zwsp.."+", zwsp)
-        end
-
-        local oldChat = game:GetService("TextChatService").ChatInputBarConfiguration.TargetTextChannel.SendAsync
-        game:GetService("TextChatService").ChatInputBarConfiguration.TargetTextChannel.SendAsync = function(self, text)
-            oldChat(self, bypassText(text))
-        end
-        Rayfield:Notify({Title = "Bypass", Content = "Advanced bypass enabled! Works on almost anything.", Duration = 5})
-    end,
-})
-
-BypassTab:CreateButton({
-    Name = "Info: Disable Bypass",
-    Description = "How to turn off bypasses",
-    Callback = function()
-        Rayfield:Notify({Title = "Info", Content = "To fully disable bypasses, re-execute the script without pressing the bypass buttons.", Duration = 8})
-    end,
-})
-
--- Script Hubs Tab (all your existing universal hubs)
-local HubsTab = Window:CreateTab("Script Hubs", "rocket")
-
--- (Your existing hub buttons here - Infinite Yield, Nameless Admin, Voidware, Rochip, Fox Hub, Ketamine, Owl Hub, Dark Hub, Vape V4, Blaze, Evo V2, Redz, Proxo)
--- Kept unchanged for brevity, but include them as in your original script
-
--- New FE Animations Tab
-local FEAnimTab = Window:CreateTab("FE Animations", "zap")
-
--- FE Wally West (R15 reanimation GUI)
-FEAnimTab:CreateButton({
-    Name = "FE Wally West",
-    Description = "R15 Wally West (The Flash) reanimation with emotes",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/kaisigma321/WallyWestFEGui/main/source"))()
-        Rayfield:Notify({Title = "FE Anim", Content = "FE Wally West loaded! (R15 required)", Duration = 5})
-    end,
-})
-
--- FE Titan (Giant transformation)
-FEAnimTab:CreateButton({
-    Name = "FE Titan",
-    Description = "FE Giant Titan transformation with animations",
-    Callback = function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/VgFdegiZ"))()  -- Common working FE Titan source
-        Rayfield:Notify({Title = "FE Anim", Content = "FE Titan loaded!", Duration = 5})
-    end,
-})
-
--- FE Noli Animations Pack (large troll/dance pack)
-FEAnimTab:CreateButton({
-    Name = "FE Noli Animations Pack",
-    Description = "320+ FE animations (troll, dance, freaky, etc.) - Keyless",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ExploitFin/AquaMatrix/refs/heads/AquaMatrix/AquaMatrix"))()
-        Rayfield:Notify({Title = "FE Anim", Content = "FE Noli/Animation Pack loaded! (320+ anims)", Duration = 6})
-    end,
-})
-
-Rayfield:Notify({
-    Title = "MARCELO SCRIPT Loaded",
-    Content = "Key system removed! Added FE Wally West, FE Titan, and FE Noli Animations Pack.",
-    Duration = 6,
-})
+Rayfield:LoadConfiguration()
