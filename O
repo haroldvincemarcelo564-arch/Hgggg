@@ -1,0 +1,130 @@
+-- AFSE Unli Yen Custom Script | Draggable GUI | leaderstats.Yen Confirmed | Dec 31, 2025
+getgenv().Config = {
+    AutoFarm = true,
+    AutoCollect = true,
+    AutoTrain = true,
+    TrainStat = "Strength",  -- Change: "Strength", "Durability", "Chakra", etc. (Spy for ID if needed)
+    MobNames = {"SARKA", "GEN", "IGICHO", "REMGONUK", "BOOH", "SAYTAMU"}  -- Fast yen mobs
+}
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+local hum = char:WaitForChild("Humanoid")
+
+-- GUI (Draggable + Yen Display + Credit)
+local gui = Instance.new("ScreenGui", player.PlayerGui); gui.Name = "UnliYenGUI"; gui.ResetOnSpawn = false
+local frame = Instance.new("Frame", gui); frame.Size = UDim2.new(0,250,0,220); frame.Position = UDim2.new(0,10,0,10); frame.BackgroundColor3 = Color3.fromRGB(30,30,30); frame.BorderSizePixel = 0; frame.Active = true; frame.Draggable = true  -- Built-in draggable (simple!)
+-- Fallback Custom Drag (if needed)
+local dragging = false; local dragStart = nil; local startPos = nil
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+local title = Instance.new("TextLabel", frame); title.Size = UDim2.new(1,0,0,30); title.Position = UDim2.new(0,0,0,0); title.Text = "🚀 AFSE Unli Yen"; title.TextColor3 = Color3.new(1,1,1); title.BackgroundTransparency = 1; title.Font = Enum.Font.GothamBold; title.TextSize = 16; title.ZIndex = 10
+local credit = Instance.new("TextLabel", frame); credit.Size = UDim2.new(1,0,0,20); credit.Position = UDim2.new(0,0,0,30); credit.Text = "made by janzenmakes"; credit.TextColor3 = Color3.fromRGB(170,170,170); credit.BackgroundTransparency = 1; credit.Font = Enum.Font.Gotham; credit.TextSize = 12
+local yenLabel = Instance.new("TextLabel", frame); yenLabel.Size = UDim2.new(1,0,0,30); yenLabel.Position = UDim2.new(0,0,0,50); yenLabel.Text = "Yen: Loading..."; yenLabel.TextColor3 = Color3.new(0,1,0); yenLabel.BackgroundTransparency = 1; yenLabel.Font = Enum.Font.Gotham; yenLabel.TextSize = 14
+local toggleFarm = Instance.new("TextButton", frame); toggleFarm.Size = UDim2.new(1,0,0,30); toggleFarm.Position = UDim2.new(0,0,0,80); toggleFarm.Text = "AutoFarm: ON"; toggleFarm.BackgroundColor3 = Color3.fromRGB(0,170,0); toggleFarm.TextColor3 = Color3.new(1,1,1); toggleFarm.Font = Enum.Font.Gotham; toggleFarm.TextSize = 14; toggleFarm.BorderSizePixel = 0
+local toggleTrain = Instance.new("TextButton", frame); toggleTrain.Size = UDim2.new(1,0,0,30); toggleTrain.Position = UDim2.new(0,0,0,110); toggleTrain.Text = "AutoTrain: ON"; toggleTrain.BackgroundColor3 = Color3.fromRGB(0,170,0); toggleTrain.TextColor3 = Color3.new(1,1,1); toggleTrain.Font = Enum.Font.Gotham; toggleTrain.TextSize = 14; toggleTrain.BorderSizePixel = 0
+toggleFarm.MouseButton1Click:Connect(function() Config.AutoFarm = not Config.AutoFarm; toggleFarm.Text = "AutoFarm: " .. (Config.AutoFarm and "ON" or "OFF"); toggleFarm.BackgroundColor3 = Config.AutoFarm and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0) end)
+toggleTrain.MouseButton1Click:Connect(function() Config.AutoTrain = not Config.AutoTrain; toggleTrain.Text = "AutoTrain: " .. (Config.AutoTrain and "ON" or "OFF"); toggleTrain.BackgroundColor3 = Config.AutoTrain and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0) end)
+
+-- Update Yen Live (Comma Formatted)
+spawn(function()
+    while true do
+        pcall(function()
+            local yenVal = player.leaderstats.Yen.Value
+            local formatted = tostring(yenVal):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+            yenLabel.Text = "Yen: " .. formatted
+        end)
+        wait(1)
+    end
+end)
+
+-- Anti-AFK
+spawn(function()
+    while true do
+        local v = Vector3.new(math.random(-50,50), 0, math.random(-50,50))
+        root.CFrame = root.CFrame + v/100
+        wait(math.random(100,300)/100)
+    end
+end)
+
+-- Auto Collect Drops (Yen/Chikara/Fruits)
+spawn(function()
+    while Config.AutoCollect do
+        for _, drop in pairs(workspace:GetDescendants()) do
+            if drop:IsA("BasePart") and (drop.Name:lower():find("yen") or drop.Name:lower():find("chikara") or drop.Name:lower():find("fruit") or drop.Name:lower():find("drop") or drop:FindFirstChild("ClickDetector")) then
+                TweenService:Create(drop, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {CFrame = root.CFrame * CFrame.new(0,5,0)}):Play()
+                drop.CanCollide = false
+                if drop:FindFirstChild("ClickDetector") then drop.ClickDetector:FireServer() end
+            end
+        end
+        wait(0.1)
+    end
+end)
+
+-- Auto Train (Exact Remote!)
+local remotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RemoteEvent")
+local statIDs = {Strength = 1, Durability = 2, Chakra = 3}
+spawn(function()
+    while Config.AutoTrain do
+        pcall(function()
+            local statID = statIDs[Config.TrainStat] or 1
+            remotes:FireServer("Train", statID)
+        end)
+        wait(0.1)
+    end
+end)
+
+-- Auto Farm Mobs (TP + Kill)
+spawn(function()
+    while Config.AutoFarm do
+        pcall(function()
+            local mobFolder = workspace:FindFirstChild("Mobs") or workspace:FindFirstChild("Enemies") or workspace
+            local targetMob, dist = nil, math.huge
+            for _, mob in pairs(mobFolder:GetChildren()) do
+                if mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                    for _, name in pairs(Config.MobNames) do
+                        if mob.Name:find(name) then
+                            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+                            if mobRoot then
+                                local d = (root.Position - mobRoot.Position).Magnitude
+                                if d < dist then dist = d; targetMob = mob end
+                            end
+                            break
+                        end
+                    end
+                end
+            end
+            if targetMob then
+                local mobRoot = targetMob.HumanoidRootPart
+                root.CFrame = mobRoot.CFrame * CFrame.new(0, 10, 5)
+                hum:MoveTo(mobRoot.Position)
+                pcall(function() ReplicatedStorage.Remotes:FindFirstChild("CombatRemote"):FireServer(targetMob) end)
+                pcall(function() ReplicatedStorage.Remotes:FindFirstChild("Damage"):FireServer(targetMob) end)
+                pcall(function() ReplicatedStorage.Remotes:FindFirstChild("Attack"):FireServer(targetMob) end)
+            end
+        end)
+        wait(0.2)
+    end
+end)
+
+print("✅ Unli Yen LOADED! Draggable GUI | Drag anywhere! 💰")
