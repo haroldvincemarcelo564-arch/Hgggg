@@ -1,5 +1,5 @@
--- janzenmakes x Jamal x Tyrone AFSE Unli Yen Hub (Jan 2026) | Draggable GUI | AutoFarm Mobs = INF YEN
--- Features: AutoFarm Mobs/Yen, Auto Collect Drops, Kill Aura, Auto Train, Speed Hack, Anti-AFK
+-- AFSE Unli Yen Hub | Full Draggable GUI | Mob Farm = Yen Grind (Jan 2026 Update)
+-- Toggle Auto Farm Mobs for endless yen, Collect Drops, Kill Aura, Speed, Anti-AFK Always On
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -13,28 +13,28 @@ getgenv().Config = {
     AutoFarm = false,
     CollectDrops = false,
     KillAura = false,
-    AutoTrain = false,
     SpeedHack = false,
     Speed = 80,
-    FarmRange = 2000
+    FarmRange = 3000
 }
 
--- Char update
+-- Character Update
+local RootPart, Humanoid
 local function updateChar()
     local char = player.Character or player.CharacterAdded:Wait()
-    getgenv().Root = char:WaitForChild("HumanoidRootPart")
-    getgenv().Hum = char:WaitForChild("Humanoid")
+    RootPart = char:WaitForChild("HumanoidRootPart")
+    Humanoid = char:WaitForChild("Humanoid")
 end
 updateChar()
 player.CharacterAdded:Connect(updateChar)
 
--- Nearest Mob (Scans descendants for enemies/mobs)
+-- Get Nearest Mob (Scans workspace for enemies)
 local function getNearestMob()
     local closest = nil
     local shortest = getgenv().Config.FarmRange
     for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") and v ~= player.Character then
-            local dist = (getgenv().Root.Position - v.HumanoidRootPart.Position).Magnitude
+        if v:IsA("Model") and v ~= player.Character and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+            local dist = (RootPart.Position - v.HumanoidRootPart.Position).Magnitude
             if dist < shortest then
                 shortest = dist
                 closest = v
@@ -44,7 +44,7 @@ local function getNearestMob()
     return closest
 end
 
--- Anti-AFK
+-- Anti-AFK (Always On)
 spawn(function()
     while true do
         VirtualUser:CaptureController()
@@ -54,28 +54,28 @@ spawn(function()
 end)
 
 -- Speed Hack
-RunService.RenderStepped:Connect(function()
-    if getgenv().Config.SpeedHack then
-        getgenv().Hum.WalkSpeed = getgenv().Config.Speed
-    else
-        getgenv().Hum.WalkSpeed = 16
+RunService.Heartbeat:Connect(function()
+    if getgenv().Config.SpeedHack and Humanoid then
+        Humanoid.WalkSpeed = getgenv().Config.Speed
+    elseif Humanoid then
+        Humanoid.WalkSpeed = 16
     end
 end)
 
--- AutoFarm Mobs (Main Yen Grind)
+-- Auto Farm Mobs (Yen from kills)
 spawn(function()
     while true do
-        wait(0.2)
-        if getgenv().Config.AutoFarm then
+        wait(0.15)
+        if getgenv().Config.AutoFarm and RootPart then
             local mob = getNearestMob()
-            if mob and mob:FindFirstChild("HumanoidRootPart") then
-                getgenv().Root.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 10, -3)
+            if mob then
+                RootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 8, -5)
                 VirtualUser:ClickButton1(Vector2.new())
-                
+                -- Kill Aura TP enemies to you
                 if getgenv().Config.KillAura then
                     for _, enemy in pairs(workspace:GetDescendants()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy ~= player.Character then
-                            enemy.HumanoidRootPart.CFrame = getgenv().Root.CFrame * CFrame.new(0,0,-5)
+                        if enemy:IsA("Model") and enemy ~= player.Character and enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") and enemy.Humanoid.Health > 0 then
+                            enemy.HumanoidRootPart.CFrame = RootPart.CFrame * CFrame.new(math.random(-10,10)/10, 0, -3)
                         end
                     end
                 end
@@ -84,37 +84,24 @@ spawn(function()
     end
 end)
 
--- Collect Drops (Yen/Chikara Orbs)
+-- Auto Collect Drops (Yen/Chikara Orbs)
 spawn(function()
-    while getgenv().Config.CollectDrops do
-        for _, drop in pairs(workspace:GetDescendants()) do
-            if drop:IsA("BasePart") and (drop.Name:lower():find("yen") or drop.Name:lower():find("chikara") or drop.Name:lower():find("orb") or drop.Name:lower():find("drop")) then
-                getgenv().Root.CFrame = drop.CFrame
-                wait(0.1)
+    while true do
+        wait(0.3)
+        if getgenv().Config.CollectDrops and RootPart then
+            for _, drop in pairs(workspace:GetDescendants()) do
+                if drop:IsA("BasePart") and (string.find(string.lower(drop.Name), "yen") or string.find(string.lower(drop.Name), "chikara") or string.find(string.lower(drop.Name), "orb") or string.find(string.lower(drop.Name), "drop")) and drop.Parent ~= player.Character then
+                    RootPart.CFrame = drop.CFrame * CFrame.new(0, 3, 0)
+                    wait(0.05)
+                end
             end
         end
-        wait(0.4)
     end
 end)
 
--- Auto Train (Zones/Pads)
-spawn(function()
-    while getgenv().Config.AutoTrain do
-        for _, zone in pairs(workspace:GetDescendants()) do
-            if zone:IsA("BasePart") and (zone.Name:lower():find("train") or zone.Name:lower():find("zone") or zone.Name:lower():find("pad")) then
-                getgenv().Root.CFrame = zone.CFrame * CFrame.new(0,5,0)
-                VirtualUser:ClickButton1(Vector2.new())
-                wait(0.5)
-            end
-        end
-        wait(1)
-    end
-end)
-
--- Draggable GUI Function
+-- Draggable Function
+local dragging, dragInput, mousePos, framePos
 local function makeDraggable(frame)
-    local dragging = false
-    local dragInput, mousePos, framePos
     frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -140,36 +127,169 @@ local function makeDraggable(frame)
     end)
 end
 
--- GUI
+-- Create GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "JamalTyroneHub"
+ScreenGui.Name = "AFSEUnliYenHub"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = player.PlayerGui
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 480, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -190)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.Size = UDim2.new(0, 500, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
--- (Corners, gradients, strokes same as before – dark sleek theme)
+local UICorner1 = Instance.new("UICorner")
+UICorner1.CornerRadius = UDim.new(0, 12)
+UICorner1.Parent = MainFrame
 
+local UIStroke1 = Instance.new("UIStroke")
+UIStroke1.Color3 = Color3.fromRGB(60, 60, 80)
+UIStroke1.Thickness = 2
+UIStroke1.Parent = MainFrame
+
+local UIGradient1 = Instance.new("UIGradient")
+UIGradient1.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 55)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 35))
+}
+UIGradient1.Rotation = 45
+UIGradient1.Parent = MainFrame
+
+-- Top Bar (Draggable)
 local TopBar = Instance.new("Frame")
--- ... (same setup)
+TopBar.Size = UDim2.new(1, 0, 0, 50)
+TopBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local UICorner2 = Instance.new("UICorner")
+UICorner2.CornerRadius = UDim.new(0, 12)
+UICorner2.Parent = TopBar
+
+local UIStroke2 = Instance.new("UIStroke")
+UIStroke2.Color3 = Color3.fromRGB(80, 80, 100)
+UIStroke2.Thickness = 1.5
+UIStroke2.Parent = TopBar
 
 local Title = Instance.new("TextLabel")
-Title.Text = "🗡️ x Jamal x Tyrone AFSE Hub"
+Title.Size = UDim2.new(1, -60, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "💰 AFSE Unli Yen Hub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
 
--- Close button same
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseBtn.Position = UDim2.new(1, -50, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextScaled = true
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TopBar
+
+local UICorner3 = Instance.new("UICorner")
+UICorner3.CornerRadius = UDim.new(0, 8)
+UICorner3.Parent = CloseBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
 makeDraggable(TopBar)
 
--- Toggles same (Auto Farm Mobs (Yen), etc.)
+-- Scroll Frame for Toggles
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -20, 1, -70)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 60)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.Parent = MainFrame
 
--- Credit at bottom
-local Credit = Instance.new("TextLabel")
-Credit.Text = "x Jamal x Tyrone 🔥"
-Credit.Parent = MainFrame
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 12)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ScrollFrame
 
-print("AFSE Hub Loaded! Toggle Auto Farm for unli yen 😈")
+-- Toggle Button Function
+local function createToggle(name, configKey)
+    local Toggle = Instance.new("TextButton")
+    Toggle.Size = UDim2.new(1, -10, 0, 55)
+    Toggle.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+    Toggle.Text = name .. ": OFF"
+    Toggle.TextColor3 = Color3.fromRGB(200, 200, 220)
+    Toggle.TextScaled = true
+    Toggle.Font = Enum.Font.GothamSemibold
+    Toggle.BorderSizePixel = 0
+    Toggle.Parent = ScrollFrame
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 10)
+    Corner.Parent = Toggle
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color3 = Color3.fromRGB(70, 70, 90)
+    Stroke.Thickness = 1.5
+    Stroke.Parent = Toggle
+
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 55, 75)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
+    }
+    Gradient.Parent = Toggle
+
+    local toggled = false
+    Toggle.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        getgenv().Config[configKey] = toggled
+        Toggle.Text = name .. ": " .. (toggled and "ON" or "OFF")
+        if toggled then
+            Toggle.BackgroundColor3 = Color3.fromRGB(30, 100, 40)
+            Gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 150, 60)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 80, 30))
+            }
+            Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            Toggle.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+            Gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 55, 75)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 60))
+            }
+            Toggle.TextColor3 = Color3.fromRGB(200, 200, 220)
+        end
+    end)
+
+    -- Hover Effect
+    local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart)
+    Toggle.MouseEnter:Connect(function()
+        TweenService:Create(Toggle, tweenInfo, {Size = UDim2.new(1, 0, 0, 58)}):Play()
+    end)
+    Toggle.MouseLeave:Connect(function()
+        TweenService:Create(Toggle, tweenInfo, {Size = UDim2.new(1, -10, 0, 55)}):Play()
+    end)
+
+    -- Update Canvas
+    UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
+    end)
+end
+
+-- Create Toggles (Yen Farm = AutoFarm Mobs ON)
+createToggle("Auto Farm Mobs (Yen)", "AutoFarm")
+createToggle("Auto Collect Drops (Yen Orbs)", "CollectDrops")
+createToggle("Kill Aura (Faster Kills)", "KillAura")
+createToggle("Speed Hack (80)", "SpeedHack")
+
+print("💰 AFSE Unli Yen Hub Loaded! Drag top bar, toggle Auto Farm Mobs for yen rain 😈")
+print("TP to mob zones like Treadmill/Bandit (gear icon) - Priv server AFK max!")
